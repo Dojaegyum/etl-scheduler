@@ -1,0 +1,42 @@
+name: Sync eTL to Google Calendar
+
+on:
+  schedule:
+    - cron: "23 */3 * * *" # UTC 기준 3시간마다, 정시 혼잡 회피
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "변경 목록만 출력하고 쓰지 않음"
+        type: boolean
+        default: false
+
+concurrency:
+  group: etl-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CANVAS_PRIVATE_TOKEN: ${{ secrets.CANVAS_PRIVATE_TOKEN }}
+      CANVAS_BASE_URL: https://myetl.snu.ac.kr
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+      GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+      REMINDER_MINUTES: ${{ vars.REMINDER_MINUTES }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Sync (dry-run)
+        if: ${{ inputs.dry_run }}
+        run: pnpm sync:dry
+      - name: Sync
+        if: ${{ !inputs.dry_run }}
+        run: pnpm sync
