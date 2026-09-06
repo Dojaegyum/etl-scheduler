@@ -53,6 +53,8 @@ GOOGLE_REFRESH_TOKEN=1//xxxxxxxx
 GOOGLE_CALENDAR_ID=xxxxxxxx@group.calendar.google.com
 ```
 
+캘린더 생성만 실패했다면(예: Calendar API 미활성화) 토큰 줄은 그대로 출력되니 먼저 `.env`에 넣고, 원인을 고친 뒤 `pnpm auth`를 다시 실행한다. 토큰이 있으면 브라우저 동의 없이 캘린더 생성만 다시 시도한다.
+
 이어서:
 
 ```

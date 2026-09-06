@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { calendar } from "@googleapis/calendar";
 import { GOOGLE_SCOPE, type Config } from "./config.ts";
 import { createOAuthClient, findOrCreateCalendar } from "./google.ts";
+import { errorMessage } from "./retry.ts";
 
 export function receiveCodeViaLoopback(
   onReady: (redirectUri: string) => void | Promise<void>,
@@ -54,10 +55,10 @@ export function openBrowser(url: string): void {
   }
 }
 
-export async function runAuth(
-  config: Pick<Config, "googleClientId" | "googleClientSecret" | "googleCalendarId">,
+async function obtainRefreshToken(
+  config: Pick<Config, "googleClientId" | "googleClientSecret">,
   opts: { log: (line: string) => void; openBrowser?: (url: string) => void },
-): Promise<{ refreshToken: string; calendarId: string }> {
+): Promise<string> {
   const open = opts.openBrowser ?? openBrowser;
   const { code, redirectUri } = await receiveCodeViaLoopback((uri) => {
     const oauth = createOAuthClient(config.googleClientId, config.googleClientSecret, uri);
@@ -74,8 +75,33 @@ export async function runAuth(
       "refresh token을 받지 못했습니다. Google 계정 → 보안 → 서드파티 앱에서 이 앱의 접근을 삭제한 뒤 다시 실행하세요.",
     );
   }
-  oauth.setCredentials(tokens);
+  return tokens.refresh_token;
+}
+
+export type AuthResult = { refreshToken: string; calendarId: string | null; calendarError: string | null };
+
+/**
+ * 토큰이 이미 있으면 브라우저 동의를 건너뛰고 캘린더 생성만 한다.
+ * 캘린더 생성이 실패해도 토큰은 돌려주어, 동의를 다시 받지 않고 재시도할 수 있게 한다.
+ */
+export async function runAuth(
+  config: Pick<Config, "googleClientId" | "googleClientSecret" | "googleRefreshToken" | "googleCalendarId">,
+  opts: { log: (line: string) => void; openBrowser?: (url: string) => void },
+): Promise<AuthResult> {
+  let refreshToken = config.googleRefreshToken;
+  if (refreshToken) {
+    opts.log("GOOGLE_REFRESH_TOKEN이 이미 있어 브라우저 동의를 건너뛰고 캘린더만 확인합니다.");
+  } else {
+    refreshToken = await obtainRefreshToken(config, opts);
+  }
+
+  const oauth = createOAuthClient(config.googleClientId, config.googleClientSecret);
+  oauth.setCredentials({ refresh_token: refreshToken });
   const api = calendar({ version: "v3", auth: oauth });
-  const cal = await findOrCreateCalendar(api, config.googleCalendarId);
-  return { refreshToken: tokens.refresh_token, calendarId: cal.id };
+  try {
+    const cal = await findOrCreateCalendar(api, config.googleCalendarId);
+    return { refreshToken, calendarId: cal.id, calendarError: null };
+  } catch (err) {
+    return { refreshToken, calendarId: null, calendarError: errorMessage(err) };
+  }
 }

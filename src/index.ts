@@ -48,11 +48,17 @@ async function commandSync(dryRun: boolean): Promise<number> {
 
 async function commandAuth(): Promise<number> {
   const config = loadConfig();
-  const { refreshToken, calendarId } = await runAuth(config, { log });
-  log("\n인증 완료. 아래 두 줄을 .env에 넣고, GitHub에 올릴 때는 Secrets에도 넣으세요:\n");
-  log(`GOOGLE_REFRESH_TOKEN=${refreshToken}`);
-  log(`GOOGLE_CALENDAR_ID=${calendarId}`);
-  return 0;
+  const result = await runAuth(config, { log });
+  // 캘린더 생성이 실패해도 토큰은 반드시 출력한다. 다음 실행은 동의 없이 캘린더만 다시 시도한다.
+  log("\n아래 값을 .env에 넣고, GitHub에 올릴 때는 Secrets에도 넣으세요:\n");
+  log(`GOOGLE_REFRESH_TOKEN=${result.refreshToken}`);
+  if (result.calendarId) {
+    log(`GOOGLE_CALENDAR_ID=${result.calendarId}`);
+    return 0;
+  }
+  console.error(`\n캘린더를 만들지 못했습니다: ${result.calendarError}`);
+  console.error("원인을 해결한 뒤 `pnpm auth`를 다시 실행하세요. 위 토큰이 .env에 있으면 브라우저 동의 없이 캘린더 생성만 다시 시도합니다.");
+  return 1;
 }
 
 function isInvalidGrant(err: unknown): boolean {
