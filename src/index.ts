@@ -17,11 +17,12 @@ async function commandSync(dryRun: boolean): Promise<number> {
   const items = await fetchPlannerItems(config, window);
   const desired = items.map((item) => toDesiredEvent(item, config.reminderMinutes));
 
+  // 동기화는 캘린더를 만들지 않는다. 크론이 돌 때마다 새 캘린더가 생기는 사고를 막기 위해 ID를 요구한다.
+  if (!config.googleCalendarId) {
+    throw new ConfigError("GOOGLE_CALENDAR_ID가 없습니다. `pnpm auth`를 실행하면 캘린더를 만들고 ID를 출력합니다.");
+  }
   const { api } = createGoogleClient(config);
   const cal = await findOrCreateCalendar(api, config.googleCalendarId);
-  if (cal.created) {
-    log(`캘린더 "eTL 과제"를 새로 만들었습니다. 아래 값을 GOOGLE_CALENDAR_ID에 저장하세요:\n${cal.id}`);
-  }
   const existing = await listManagedEvents(api, cal.id, window);
   const plan = planSync(desired, existing);
 

@@ -138,7 +138,7 @@ type SyncPlan = {
 | `CANVAS_BASE_URL` | | `https://myetl.snu.ac.kr` | |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✔ | | 데스크톱형 OAuth 클라이언트 |
 | `GOOGLE_REFRESH_TOKEN` | ✔(sync) | | `auth` 명령 출력 |
-| `GOOGLE_CALENDAR_ID` | | | 있으면 이름 검색 생략. `auth`가 출력 |
+| `GOOGLE_CALENDAR_ID` | ✔(sync) | | `auth`가 캘린더를 만들고 출력. `calendar.app.created` 범위로는 캘린더 목록 조회가 403이라 이름 검색이 불가능하므로 `sync`는 ID가 없으면 캘린더를 만들지 않고 종료한다(크론이 캘린더를 늘리는 사고 방지) |
 | `REMINDER_MINUTES` | | `1440` | 쉼표 구분, 예 `1440,60` |
 
 상수: 창 −7/+120일, 캘린더 이름 `eTL 과제`, 시간대 `Asia/Seoul`.

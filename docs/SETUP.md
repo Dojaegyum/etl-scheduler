@@ -83,4 +83,4 @@ gh secret set -f .env
 |---|---|
 | 로그에 "Canvas 토큰이 거부되었습니다" | myetl에서 토큰 재발급 → `.env` 갱신 → `gh secret set CANVAS_PRIVATE_TOKEN` |
 | 로그에 "Google refresh token이 만료" (`invalid_grant`) | `pnpm auth` 재실행 → `.env` 갱신 → `gh secret set GOOGLE_REFRESH_TOKEN` |
-| 캘린더를 실수로 지움 | `.env`에서 `GOOGLE_CALENDAR_ID` 줄을 비우고 `pnpm sync` → 새로 만든다 → 새 ID를 Secrets에 반영 |
+| 캘린더를 실수로 지움 | `.env`에서 `GOOGLE_CALENDAR_ID` 줄을 비우고 `pnpm auth` 재실행 → 새로 만든다 → 새 ID를 `.env`와 Secrets에 반영. `pnpm sync`는 ID가 없으면 캘린더를 만들지 않고 멈춘다 |

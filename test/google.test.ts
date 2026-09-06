@@ -100,6 +100,22 @@ describe("findOrCreateCalendar", () => {
       requestBody: expect.objectContaining({ summary: "eTL 과제", timeZone: "Asia/Seoul" }),
     });
   });
+  it("creates when listing is forbidden by the minimal scope (403)", async () => {
+    const list = vi.fn(async () => {
+      throw { response: { status: 403 }, message: "Request had insufficient authentication scopes." };
+    });
+    const insert = vi.fn(async () => ({ data: { id: "cal-new" } }));
+    const api = fakeApi({ calendarList: { list }, calendars: { insert } });
+    await expect(findOrCreateCalendar(api, null)).resolves.toEqual({ id: "cal-new", created: true });
+  });
+  it("rethrows other listing errors", async () => {
+    // 400은 재시도 대상이 아니므로 바로 던져진다(5xx는 재시도로 테스트가 느려짐)
+    const list = vi.fn(async () => {
+      throw { response: { status: 400 } };
+    });
+    const api = fakeApi({ calendarList: { list }, calendars: { insert: vi.fn() } });
+    await expect(findOrCreateCalendar(api, null)).rejects.toEqual({ response: { status: 400 } });
+  });
 });
 
 describe("listManagedEvents", () => {

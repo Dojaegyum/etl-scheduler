@@ -64,9 +64,15 @@ export async function findOrCreateCalendar(
       throw err;
     }
   }
-  const list = await withRetry(() => api.calendarList.list({ minAccessRole: "writer" }));
-  const found = list.data.items?.find((c) => c.summary === CALENDAR_NAME);
-  if (found?.id) return { id: found.id, created: false };
+  // 캘린더 목록 조회는 calendar.app.created 범위로는 허용되지 않는다(403).
+  // 더 넓은 범위가 있을 때만 이름으로 찾고, 아니면 바로 새로 만든다.
+  try {
+    const list = await withRetry(() => api.calendarList.list({ minAccessRole: "writer" }));
+    const found = list.data.items?.find((c) => c.summary === CALENDAR_NAME);
+    if (found?.id) return { id: found.id, created: false };
+  } catch (err) {
+    if (statusOf(err) !== 403) throw err;
+  }
 
   const created = await withRetry(() =>
     api.calendars.insert({
